@@ -3,6 +3,8 @@
 import logging
 import praw
 import yaml
+import re
+import random
 from pprint import pprint
 from time import time, sleep
 
@@ -113,22 +115,33 @@ class Ravenor(object):
 
     def get_comments(self, subreddit, since):
         logging.debug('Get comments')
-        comments = self.target.stream.comments()
+        comments = self.target.comments.new()
         valid = []
         for c in comments:
-            logging.debug('Fetch comment')
+            logging.debug('Comment id: {}'.format(c.id))
             if c.created_utc >= since:
-                logging.debug('New enough comment')
+                logging.debug('New enough comment {}'.format(c.created_utc))
                 if c.subreddit_name_prefixed == subreddit:
-                    logging.debug('Correct subreddit')
+                    logging.debug('Correct subreddit {}'.format(c.subreddit_name_prefixed))
                     valid.append(c)
             elif c.created < since:
-                logging.debug('Comment too old, stop fetching')
-                break
+                logging.debug('Comment too old {}'.format(c.created_utc))
         return valid
 
     def process(self, comment):
-        logging.info(comment.html_body)
+        for line in comment.body.split('\n'):
+            if len(line) <= 0:
+                continue
+            if line[0] == '>':
+                logging.debug('Skip quote')
+                continue
+        sentances = re.split('/(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', line)
+        reply = random.choice(self.database)
+        payload = '> {}\n{} ({})'.format(
+            random.choice(sentances),
+            reply['message'], reply['source']
+        )
+        logging.info('Reply:\n{}'.format(payload))
 
 if __name__ == '__main__':
     Ravenor()
