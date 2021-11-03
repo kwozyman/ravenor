@@ -25,8 +25,10 @@ class Ravenor(object):
             setattr(self, k, final_config[k])
         self._basic_logging()
         self.set_loglevel(self.loglevel)
+        logging.debug('Load config file')
         self.config = self._load_yaml(self.config_file)
         self.database = self._load_yaml(self.config['database'])
+        logging.info('Login to Reddit...')
         self.reddit = praw.Reddit(
             client_id=self.config['client_id'],
             client_secret=self.config['client_secret'],
@@ -34,6 +36,7 @@ class Ravenor(object):
             user_agent='ravenor 0.0.1',
             username=self.config['username']
             )
+        logging.info('Get target user...')
         self.target = self.reddit.redditor(self.config['target'])
         self.main_loop()
 
@@ -52,9 +55,6 @@ class Ravenor(object):
         return None
 
     def cmdargs(self):
-        """
-        Parse command line arguments and read config files (if module exists)
-        """
         description = 'Ravenor reddit bot'
         import argparse
         parser = argparse.ArgumentParser(
@@ -108,21 +108,27 @@ class Ravenor(object):
             for comment in self.handle:
                 self.process(comment)
             self.handle = []
+            logging.debug('Sleeping')
             sleep(int(self.config['frequency']))
 
     def get_comments(self, subreddit, since):
+        logging.debug('Get comments')
         comments = self.target.stream.comments()
         valid = []
         for c in comments:
+            logging.debug('Fetch comment')
             if c.created_utc >= since:
+                logging.debug('New enough comment')
                 if c.subreddit_name_prefixed == subreddit:
+                    logging.debug('Correct subreddit')
                     valid.append(c)
             elif c.created < since:
+                logging.debug('Comment too old, stop fetching')
                 break
         return valid
 
     def process(self, comment):
-        print(comment.html_body)
+        logging.info(comment.html_body)
 
 if __name__ == '__main__':
     Ravenor()
