@@ -129,6 +129,9 @@ class Ravenor(object):
         return valid
 
     def process(self, comment):
+        if random.randint(0, 100) < 50:
+            logging.info('I am a merciful God.')
+            return None
         for line in comment.body.split('\n'):
             if len(line) <= 0:
                 continue
@@ -136,12 +139,17 @@ class Ravenor(object):
                 logging.debug('Skip quote')
                 continue
         sentances = re.split('/(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\?)\s', line)
-        reply = random.choice(self.database)
-        payload = '> {}\n{} ({})'.format(
+        reply_text = random.choice(self.database)
+        payload = '> {}\n\n{} ({})'.format(
             random.choice(sentances),
-            reply['message'], reply['source']
+            reply_text['message'], reply_text['source']
         )
-        logging.info('Reply:\n{}'.format(payload))
+        reply = comment.reply(payload)
+        if reply is None:
+            logging.warning('Could not post reply.')
+        else:
+            logging.info('Reply: {}'.format(reply.permalink))
+        return reply
 
 if __name__ == '__main__':
     Ravenor()
